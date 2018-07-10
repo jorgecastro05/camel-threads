@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:camel="http://camel.apache.org/schema/spring"
+       xmlns:ctx="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
+
+    <ctx:annotation-config/>
+    <ctx:component-scan base-package="com.fuse"/>
+
+    <camelContext id="camel" xmlns="http://camel.apache.org/schema/spring">
+        <threadPoolProfile id="my-pool" keepAliveTime="20000" maxPoolSize="5" poolSize="2"/>
+
+        <route id="routeAsync">
+            <from uri="timer://threadSeda?period=10s&amp;delay=1s"/>
+            <log message=">> Timer thread : ${threadName}"/>
+            <to uri="seda:thread"/>
+        </route>
+
+        <route id="routeSeda">
+            <from uri="seda:thread"/>
+            <log message=">> Seda thread : ${threadName}"/>
+        </route>
+
+        <route id="routeAsyncConcurrent">
+            <from uri="timer://threadSedaConcurrent?repeatCount=1&amp;delay=10s"/>
+            <log message=">> Timer thread : ${threadName}"/>
+            <to uri="seda:thread-concurrent"/>
+            <to uri="seda:thread-concurrent"/>
+            <to uri="seda:thread-concurrent"/>
+        </route>
+
+        <route id="routeSedaConcurrent">
+            <from uri="seda:thread-concurrent?concurrentConsumers=3"/>
+            <log message=">> Seda concurrent thread : ${threadName}"/>
+        </route>
+
+        <route id="routeAsyncMultiThreads">
+            <from uri="timer://threadDirect?period=10s&amp;delay=20s"/>
+            <log message=">> Timer Direct parallel thread : ${threadName}"/>
+            <multicast parallelProcessing="true">
+                <to uri="direct:threadparallel"/>
+                <to uri="direct:threadparallel"/>
+            </multicast>
+        </route>
+
+        <route id="routeParallel">
+            <from uri="direct:threadparallel"/>
+            <threads executorServiceRef="my-pool">
+                <log message=">> Direct parallel thread: ${threadName}"/>
+            </threads>
+        </route>
+
+
+        <route id="routeSyncOneThread">
+            <from uri="timer://threadDirect?period=10s&amp;delay=30s"/>
+            <log message=">> Timer Direct thread : ${threadName}"/>
+            <to uri="direct:thread"/>
+        </route>
+
+        <route id="routeDirectThread">
+            <from uri="direct:thread"/>
+            <log message=">> Direct thread : ${threadName}"/>
+        </route>
+
+    </camelContext>
+
+</beans>
