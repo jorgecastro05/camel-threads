@@ -15,18 +15,20 @@
         <threadPoolProfile id="my-pool" keepAliveTime="20000" maxPoolSize="5" poolSize="2"/>
 
         <route id="routeAsync">
+            <description>Para todos los timers cada uno tiene un hilo y no se crea mas de uno</description>
             <from uri="timer://threadSeda?period=10s&amp;delay=1s"/>
             <log message=">> Timer thread : ${threadName}"/>
             <to uri="seda:thread"/>
         </route>
 
         <route id="routeSeda">
+            <description>El seda abre un hilo, siempre se utiliza en mismo hilo</description>
             <from uri="seda:thread"/>
             <log message=">> Seda thread : ${threadName}"/>
         </route>
 
         <route id="routeAsyncConcurrent">
-            <from uri="timer://threadSedaConcurrent?repeatCount=1&amp;delay=10s"/>
+            <from uri="timer://threadSedaConcurrent?period=10s&amp;delay=10s"/>
             <log message=">> Timer thread : ${threadName}"/>
             <to uri="seda:thread-concurrent"/>
             <to uri="seda:thread-concurrent"/>
@@ -34,6 +36,7 @@
         </route>
 
         <route id="routeSedaConcurrent">
+            <description>El seda abre un maximo de tres hilos lo que llegue se procesa en los tres</description>
             <from uri="seda:thread-concurrent?concurrentConsumers=3"/>
             <log message=">> Seda concurrent thread : ${threadName}"/>
         </route>
@@ -42,26 +45,30 @@
             <from uri="timer://threadDirect?period=10s&amp;delay=20s"/>
             <log message=">> Timer Direct parallel thread : ${threadName}"/>
             <multicast parallelProcessing="true">
+                <description>Abre dos Hilos</description>
                 <to uri="direct:threadparallel"/>
                 <to uri="direct:threadparallel"/>
             </multicast>
+            <log message=">> El hilo principal luego del multicast es : ${threadName}"/>
         </route>
 
         <route id="routeParallel">
             <from uri="direct:threadparallel"/>
-            <threads executorServiceRef="my-pool">
+            <threads id="MyCustomThreadingModel" executorServiceRef="my-pool">
                 <log message=">> Direct parallel thread: ${threadName}"/>
             </threads>
         </route>
 
 
         <route id="routeSyncOneThread">
+            <description>El timer crea un hilo de ejecucion para las rutas incovadas</description>
             <from uri="timer://threadDirect?period=10s&amp;delay=30s"/>
             <log message=">> Timer Direct thread : ${threadName}"/>
             <to uri="direct:thread"/>
         </route>
 
         <route id="routeDirectThread">
+            <description>Pertenece al mismo hilo del timer</description>
             <from uri="direct:thread"/>
             <log message=">> Direct thread : ${threadName}"/>
         </route>
